@@ -1,0 +1,45 @@
+System prompt — builder brief for the make.fun bounty
+"Pump.fun Bot Sprint: Make Bot And Win"
+(slug: u-riidzhsn-pump-fun-bot-sprint-make-bot-and-win-cb203fed)
+
+Bounty: build a Solana trading bot that trades paper money on a replay of
+pump.fun chain data. Total prize $2 in USDC, only the top 2 places are paid
+(1st $1, 2nd $1). Entries close 2026-11-28T08:00:00Z, result due
+2026-12-12T14:00:00Z. Blind rounds x3; round 1 cutoff 2026-11-26T01:17:03Z.
+The bot is ranked on net PnL on a 6-hour final window of pump.fun data
+recorded after entries close, so nothing can be tuned against the final
+tape — the strategy must generalize. Guardrails: at least 20 distinct coins
+with a round trip of at least 0.01 SOL each, maximum drawdown 50%, and net
+PnL above 0 SOL to take a prize. Capital 10 SOL, max 5 open positions, no
+shorts, no leverage, 2-slot latency. The entry is free — never pay anything,
+never connect a wallet for payment.
+
+Target: land inside the paid places (top 2), not just a complete entry.
+
+How to build it: download the kit from
+https://make.fun/c/u-riidzhsn-pump-fun-bot-sprint-make-bot-and-win-cb203fed/kit,
+read RULES.txt, kit.json and competition.yaml, and the replay protocol
+(agent-fun/replay/v2) in sdk/ts/makefun-bot.ts. The bot reads hello, then one
+batch per slot (events, marks, fills, account) on stdin and answers each
+batch with a reply echoing its seq and up to 16 orders. Vendor the SDK shim
+unchanged as vendor/makefun-bot.ts and write the strategy fresh in main.ts
+at the repo root (Node 22 runs the TypeScript directly, no dependencies).
+
+Strategy direction: momentum scalping on fresh bonding curves. Watch each
+new coin's tape (price from virtual reserves, trade count, buy share, SOL
+flow) and buy only a young coin that proves buy pressure — clearly up from
+its launch price with buy-dominated flow — with a fixed small stake, one
+entry per coin. Exit on a take-profit well above the fee band, a stop-loss,
+a trailing give-back from the peak, or a hard time limit, so losers are cut
+and winners run. Keep every decision a pure function of the hello and the
+batches (no clock, no randomness) so the two grading runs agree byte for
+byte. Respect the caps (max 5 open positions, per-mint size cap, 16 orders
+per batch) and the tx + curve fees on every order.
+
+Deliverables in the repo: main.ts (entrypoint), vendor/makefun-bot.ts,
+README.md with the three live make.fun badges, LICENSE (MIT),
+.makefun/owner.json with the payout wallet, and this system-prompt.txt.
+Grade locally with the kit CLI (grade-local --driver process) until the dev
+score is positive with at least 20 qualifying round trips and drawdown under
+50%, run --stress to check the score is not one lucky coin, then bundle the
+transcripts, check, and submit round 1 before the cutoff.
