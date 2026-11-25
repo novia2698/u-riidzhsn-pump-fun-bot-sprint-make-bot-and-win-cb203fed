@@ -49,10 +49,10 @@ const MIN_AGE_SLOTS = 400; // ~2.7 min
 /** And no older than this for a first entry. */
 const MAX_ENTRY_AGE_SLOTS = 20_000;
 /** Net SOL (buys minus sells) the window must show. */
-const MIN_NET_SOL = 1.5;
+const MIN_NET_SOL = 3.0;
 /** Buys and distinct buying wallets the window must show. */
 const MIN_BUYS = 3;
-const MIN_BUYERS = 6;
+const MIN_BUYERS = 8;
 /** Price rise over the window, in bps, that counts as momentum. */
 const MIN_RISE_BPS = 2000; // +20%
 const MAX_RISE_BPS = 15_000; // +150%: already ran, skip it
@@ -72,9 +72,10 @@ const ADD_MIN_GAIN_BPS = 500; // +5%
 /** Smallest buy worth sending: below this the tx fee eats the trade. */
 const MIN_BUY_LAMPORTS = LAMPORTS_PER_SOL / 100n; // 0.01 SOL
 /** Exits: stop loss, trailing give-back (armed once up), time limit. */
-const STOP_LOSS_BPS = 600; // -6%
-const TRAIL_ARM_BPS = 800; // start trailing once up +8%
-const TRAIL_GIVEBACK_BPS = 1000; // sell if it falls 10% from its peak value
+const STOP_LOSS_BPS = 400; // -4%
+const TRAIL_ARM_BPS = 1200; // start trailing once up +12%
+const TRAIL_GIVEBACK_BPS = 500; // sell if it falls 5% from its peak value
+const TAKE_PROFIT_BPS = 1800; // +18%
 const MAX_HOLD_SLOTS = 450; // ~3 min
 const HOLD_IF_UP_BPS = 2000; // time limit does not apply while up +20%
 /** Exit when the last-15-slot net flow turns this negative (SOL). */
@@ -317,6 +318,7 @@ function decide(state: BotState, batch: Batch): OrderInput[] {
     const gainBps = Math.floor(((value - cost) / cost) * 10_000);
     const heldSince = t !== undefined && t.entrySlot >= 0 ? batch.slot - t.entrySlot : 0;
     const stopLoss = gainBps <= -STOP_LOSS_BPS;
+    const takeProfit = gainBps >= TAKE_PROFIT_BPS;
     const trailing =
       peak >= cost * (1 + TRAIL_ARM_BPS / 10_000) &&
       value <= peak * (1 - TRAIL_GIVEBACK_BPS / 10_000);
@@ -327,7 +329,7 @@ function decide(state: BotState, batch: Batch): OrderInput[] {
       const f = windowStats(t, batch.slot, FADE_WINDOW_SLOTS);
       faded = f.net < FADE_NET_SOL;
     }
-    if (stopLoss || trailing || timedOut || faded) {
+    if (stopLoss || takeProfit || trailing || timedOut || faded) {
       const sell: SellInput = {
         side: 'sell',
         mint,
